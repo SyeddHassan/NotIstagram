@@ -1,25 +1,17 @@
 import express, { urlencoded } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import dotenv from "dotenv";
+import "dotenv/config";
 
-const app = express();
+export const app = express();
 
-dotenv.config();
-
-const PORT = process.env.PORT || 3000;
-
-// Middlewares
-app.use(express.json());
+// SERVER CONFIGURATIONS
+app.use(express.json({ limit: "50mb" }));
 app.use(cookieParser());
 app.use(urlencoded({ extended: true }));
-const corsOptions = {
-  origin: process.env.URL,
-  credentials: true,
-};
-app.use(cors(corsOptions));
-
-// Server
-app.listen(PORT, () => {
-  console.log(`Server listen at port ${PORT}`);
-});
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL,
+    credentials: true,
+  })
+);
