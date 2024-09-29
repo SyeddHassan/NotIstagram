@@ -5,6 +5,7 @@ import "dotenv/config";
 
 import { MiddlewareError } from "./middlewares/middleware-error.js";
 
+import UserRouter from "./routes/user.routes.js";
 import {
   testRouteFunction,
   unknownRouteFunction,
@@ -23,6 +24,9 @@ app.use(
     credentials: true,
   })
 );
+
+// ROUTES
+app.use("/api/v1", UserRouter);
 
 // BASIC ROUTES
 app.get("/", testRouteFunction);
