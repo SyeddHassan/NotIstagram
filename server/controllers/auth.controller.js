@@ -2,43 +2,35 @@ import bcrypt from "bcryptjs";
 import "dotenv/config";
 import jwt from "jsonwebtoken";
 
+import { CatchAsyncErrors } from "../middlewares/catch-async-errors.js";
+import { ErrorHandler } from "../utils/error-handler.js";
+
 import { User } from "../models/user.model.js";
 
 import {
   AccountCreatedSuccessMessage,
   DuplicateEmailErrorMessage,
-  InternalServerErrorMessageDuringLogin,
-  InternalServerErrorMessageDuringLogout,
-  InternalServerErrorMessageDuringRegistration,
   InvalidCredentialsErrorMessage,
-  LoginErrorMessage,
   LoginSuccessMessage,
-  LogoutErrorMessage,
   LogoutSuccessMessage,
   MissingFieldsErrorMessage,
-  RegistrationErrorMessage,
-} from "../messages/user-controller-messages.js";
+} from "../messages/auth-controller-messages.js";
 
 // USER REGISTRATION FUNCTION
-export const RegistrationFunction = async (req, res) => {
+export const RegistrationFunction = CatchAsyncErrors(async (req, res, next) => {
   try {
     const { username, email, password } = req.body;
     if (!username || !email || !password) {
-      return res.status(401).json({
-        message: MissingFieldsErrorMessage,
-        success: false,
-      });
+      return next(new ErrorHandler(MissingFieldsErrorMessage, 401));
     }
 
     const user = await User.findOne({ email });
     if (user) {
-      return res.status(401).json({
-        message: DuplicateEmailErrorMessage,
-        success: false,
-      });
+      return next(new ErrorHandler(DuplicateEmailErrorMessage, 401));
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+
     await User.create({
       username,
       email,
@@ -50,43 +42,29 @@ export const RegistrationFunction = async (req, res) => {
       success: true,
     });
   } catch (error) {
-    console.error(RegistrationErrorMessage(error));
-
-    return res.status(500).json({
-      message: InternalServerErrorMessageDuringRegistration,
-      success: false,
-    });
+    return next(new ErrorHandler(error.message, 500));
   }
-};
+});
 
 // USER LOGIN FUNCTION
-export const LoginFunction = async (req, res) => {
+export const LoginFunction = CatchAsyncErrors(async (req, res, next) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
-      return res.status(401).json({
-        message: MissingFieldsErrorMessage,
-        success: false,
-      });
+      return next(new ErrorHandler(MissingFieldsErrorMessage, 401));
     }
 
     let user = await User.findOne({ email });
     if (!user) {
-      return res.status(401).json({
-        message: InvalidCredentialsErrorMessage,
-        success: false,
-      });
+      return next(new ErrorHandler(InvalidCredentialsErrorMessage, 401));
     }
 
     const isPasswordMatch = await bcrypt.compare(password, user.password);
     if (!isPasswordMatch) {
-      return res.status(401).json({
-        message: InvalidCredentialsErrorMessage,
-        success: false,
-      });
+      return next(new ErrorHandler(MissingFieldsErrorMessage, 401));
     }
 
-    const token = await jwt.sign({ userId: user._id }, process.env.SECRET_KEY, {
+    const token = jwt.sign({ userId: user._id }, process.env.SECRET_KEY, {
       expiresIn: "1d",
     });
 
@@ -123,26 +101,18 @@ export const LoginFunction = async (req, res) => {
         user,
       });
   } catch (error) {
-    console.error(LoginErrorMessage(error));
-    return res.status(500).json({
-      message: InternalServerErrorMessageDuringLogin,
-      success: false,
-    });
+    return next(new ErrorHandler(error.message, 500));
   }
-};
+});
 
 // USER LOGOUT FUNCTION
-export const LogoutFunction = async (_, res) => {
+export const LogoutFunction = CatchAsyncErrors(async (_, res, next) => {
   try {
     return res.cookie("token", "", { maxAge: 0 }).json({
       message: LogoutSuccessMessage,
       success: true,
     });
   } catch (error) {
-    console.error(LogoutErrorMessage(error));
-    return res.status(500).json({
-      message: InternalServerErrorMessageDuringLogout,
-      success: false,
-    });
+    return next(new ErrorHandler(error.message, 500));
   }
-};
+});
